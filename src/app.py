@@ -1,9 +1,17 @@
+from tempfile import template
+
+from dns import exception
 from fastapi import FastAPI, HTTPException, File, UploadFile, Form, Depends
 from src.schemas import PostCreate, PostResponse
 from src.db import Post, create_db_and_tables, get_async_session
 from sqlalchemy.ext.asyncio import AsyncSession
 from contextlib import asynccontextmanager
 from sqlalchemy import select
+from src.images import imagekit
+import shutil
+import os
+import uuid
+import tempfile
 
 @asynccontextmanager
 async def lifespan(app:FastAPI):
@@ -18,18 +26,40 @@ async def upload_file(
         caption: str  = Form(""),
         session: AsyncSession = Depends(get_async_session)
 ):
-    post = Post(
-        caption = caption,
-        url = "dummyurl",
-        file_type = "photo",
-        file_name = "dummyname",
+    temp_file_path = None
+    try:
+        with tempfile.NamedTemporaryFile(delete=False, suffix=os.path.splitext(file.filename)[1]) as temp_file:
+            temp_file_path = temp_file.name
+            shutil.copyfileobj(file.file, temp_file)
 
-    )
+        with open(temp_file_path, "rb") as f:
+            upload_result = imagekit.files.upload(
+                file = f.read(),
+                file_name = file.filename,
+                use_unique_file_name=True,
+                tags=["backend-upload"]
+            )
 
-    session.add(post)
-    await session.commit()
-    await session.refresh(post)
-    return post
+        if upload_result.response_metadata.http_status_code == 200:
+
+            post = Post(
+                caption = caption,
+                url = upload_result.url,
+                file_type = "video" if file.content_type.startswith("video/") else "image",
+                file_name = upload_result.name,
+
+            )
+
+            session.add(post)
+            await session.commit()
+            await session.refresh(post)
+            return post
+    except Exception as e :
+         raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        if temp_file_path and os.path.exists(temp_file_path):
+            os.unlink(temp_file_path)
+        file.file.close()
 
 @app.get("/feed")
 async def get_feed(
