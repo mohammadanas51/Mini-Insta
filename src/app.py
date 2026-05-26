@@ -44,6 +44,8 @@ async def get_feed(
         posts_data.append({
             "id" : str(post.id),
             "caption" : post.caption,
-            
+            "url" : post.url,
+            "file_type" : post.file_type,
+            "file_name" : post.created_at.isoformat()
         })
-        
+    return {"posts" : posts_data}
