@@ -62,6 +62,7 @@ async def upload_file(
             os.unlink(temp_file_path)
         file.file.close()
 
+# Route to fetch all the posts 
 @app.get("/feed")
 async def get_feed(
         session:AsyncSession = Depends(get_async_session)
