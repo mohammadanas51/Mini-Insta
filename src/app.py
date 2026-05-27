@@ -20,6 +20,7 @@ async def lifespan(app:FastAPI):
 
 app = FastAPI(lifespan = lifespan)
 
+# Upload route 
 @app.post("/upload")
 async def upload_file(
         file:UploadFile = File(...),
