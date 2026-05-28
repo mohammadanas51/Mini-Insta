@@ -41,7 +41,9 @@ async def upload_file(
                 tags=["backend-upload"]
             )
 
-        if upload_result.response_metadata.http_status_code == 200:
+            print("Debug Log" , upload_result.json())
+
+        if upload_result and upload_result.url and upload_result.file_id:
 
             post = Post(
                 caption = caption,
